@@ -1,7 +1,9 @@
 gameAnswers = [
 
-    "classicGameWon": "Good job, you guessed all the letters and the word was:\n`{0}`" #format: word
-
+    "classicGameWon": "Good job, you guessed all the letters and the word was:\n`{0}`", #format: word
+    "classicLetterGuessed": "Letter **{0}** was guessed:\n`{1}`", #format: letter, word
+    "classicLetterNotGuessed": "Incorrect guess **{0}**:\n{1}", #format letter, word
+    "classicGameStarting": "Game has started, the word is:\n{0}" #format: word
 ]
 
 class game:
@@ -13,8 +15,8 @@ class game:
 
 		return text[2:-2]  #remove [""]
 
-	def revealLetter(word, word_guessed_so_far, letter):
-		revealedWord = word_guessed_so_far
+    @staticmethod
+	def revealLetter(word, revealedWord, letter):
 		newRevealed = ""
 		wasLetterGuessed = False
 
@@ -47,13 +49,28 @@ class classic(game):
 	    await self.channel.send(
 	        gameAnswers["classicGameWon"].format(self.word))
 
-    async def makeGuess(letter):
+    async def makeGuess(self, msg):
+
+        if self._is_whole_word_guessed(msg):
+            return self.end()
+
+        if not self._is_message_guess(msg):
+            return False, "Message is not guess"
+
         wasLetterGuessed, newRevealedWord = super().revealLetter(
-                                        self.word, self.revealedWord, letter)
+                                        self.word, self.revealedWord, msg)
         if wasLetterGuessed:
             self.revealedWord = newRevealedWord
-            await self.channel.send(
-                gameAnswers["classicLetterGuessed"].format())
 
-    def _is_message_guess():
-        pass
+            await self.channel.send(
+                gameAnswers["classicLetterGuessed"].format(msg, self.revealedWord))
+        else:
+            await self.channel.send(
+                gameAnswers["classicLetterNotGuessed"].format(msg, self.revealedWord))
+
+    @staticmethod
+    def _is_message_guess(msg):
+        return len(msg) == 1
+
+    def _is_whole_word_guessed(self, msg):
+        return msg.lower == self.word
