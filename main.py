@@ -2,45 +2,21 @@ import discord
 from discord.ext import commands
 
 from keepalive import keep_alive
-import gametypes
-
+from game_commands import start_commands
 import os
-import requests
+
 
 client = discord.Client()
-bot = commands.Bot(command_prefix="-guess ")
+bot = commands.Bot(command_prefix="gb!")
 
 games = {}
 
-responses = {
-
-	"StartingGame": "ok ur game has started, the word is: \n`{0}`",
-
-	"GameAlreadyStarted": "Wait for the game to finish nab",
-
-	"WordGuessed": "Great job {0} you guessed the word: \n `{1}`", #format: name, word
-
-	"LetterGuessed": "Correct guess **{0}**:\n `{1}`", #format: letter, word
-
-	"LetterNotGuessed": "Incorrect guess **{0}**:\n `{1}`", #format: letter, word
-}
-
-@bot.command()
-async def start(ctx):
-	channel = ctx.message.channel
-
-	if channel.id in games:
-		await channel.send(responses["GameAlreadyStarted"])
-		return
-
-	games[channel.id] = gametypes.classic(channel)
-	await channel.send(responses["StartingGame"].format(
-		games[channel.id].revealedWord))
+bot.add_cog(start_commands(bot, games))
 
 @bot.command()
 async def info(ctx):
 
-	infoMessage = "This (a bit less) spaghetti nab of a bot was made by `lasadrinx:2517`,\n it's made with discord.py and hosted on replit.com"
+	infoMessage = "This (a bit less) spaghetti nab of a bot was made by `lasadrinx#2517`,\n it's made with discord.py and hosted on replit.com"
 
 	await ctx.send(infoMessage)
 
@@ -59,33 +35,16 @@ async def on_ready():
 async def on_message(message):
 	await bot.process_commands(message)
 
-	if message.author == client:
-		return
+	if message.author.bot:
+		return 
 
 	channel = message.channel
-	msg = message.content
+	if not channel.id in games:
+	    return
 
-	if channel.id not in games:
-		return
-	game = games[channel.id]
-
-	if msg.lower() == game.word:
-		await channel.send(game.win(message))
-		return
-	if len(msg) != 1:
-		return
-
-	wasLetterCorrect, revealedWord = game.revealLetter(msg)
-
-	if game.checkForWin():
-		await channel.send(game.win(message))
-		return
-
-	if wasLetterCorrect:
-		await channel.send(responses["LetterGuessed"].format(msg, revealedWord))
-		return
-
-	await channel.send(responses["LetterNotGuessed"].format(msg, revealedWord))
-
-keep_alive()
-bot.run(os.environ["TOKEN"])
+	if await games[channel.id].handle_message(message) == "end":
+		del games[channel.id]
+		
+if __name__ == "__main__":
+	keep_alive()
+	bot.run(os.environ["token"])
