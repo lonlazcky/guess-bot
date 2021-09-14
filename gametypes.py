@@ -46,8 +46,9 @@ class game:
 	    return len(msg) == 1
 
 	@staticmethod
-	def _is_whole_word_guessed(word, msg):
-	    return msg.lower() == word
+	def _is_whole_word_guessed(word, revealedWord, msg):
+	    return msg.lower() == word or revealedWord == word
+
 
 class classic(game):
 	def __init__(self, channel):
@@ -60,28 +61,39 @@ class classic(game):
 	    	gameAnswers["classicGameWon"].format(self.word))
 		return "end"
 		
-	async def makeGuess(self, msg):
-	    """returns True if guess is correct, False if its not"""
-
-	    wasLetterGuessed, newRevealedWord = super().revealLetter(
+	def makeGuess(self, msg):
+		"""returns True if guess is correct, False if its not"""
+		
+		if not self._is_message_guess(msg):
+			return 
+		
+		wasLetterGuessed, newRevealedWord = super().revealLetter(
 	                                    self.word, self.revealedWord, msg)
-	    if wasLetterGuessed:
-	        self.revealedWord = newRevealedWord
-	        await self.channel.send(
-                gameAnswers["classicLetterGuessed"].format(msg, self.revealedWord))
-	        return True
-	    else:
-	        await self.channel.send(
-	            gameAnswers["classicLetterNotGuessed"].format(msg, self.revealedWord))
-	        return False
+		if wasLetterGuessed:
+			self.revealedWord = newRevealedWord
+		return wasLetterGuessed
 
 	async def handle_message(self, message):
 		msg = message.content
+		msg_to_send = None
+		guess = self.makeGuess(msg)
 
-		if self._is_whole_word_guessed(self.word, msg):
+		if guess is not None:
+			if guess:
+				msg_to_send = gameAnswers["classicLetterGuessed"].format(msg, self.revealedWord)
+			else: 
+				msg_to_send = gameAnswers["classicLetterNotGuessed"].format(msg, self.revealedWord)
+
+		if self._is_whole_word_guessed(self.word, self.revealedWord, msg):
 			return await self.end()
+		
+		if msg_to_send:
+			return await message.channel.send(msg_to_send)
 
-		if not self._is_message_guess(msg):
-		    return None, "Message is not guess"
 
-		return await self.makeGuess(msg)
+class hangman(classic):	
+	def __init__(self, channel, user, lives=5, free_guesses=3):
+		super().__init__(channel)
+		self.lives = lives
+		self.free_guesses = free_guesses
+		self.user = user
