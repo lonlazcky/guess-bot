@@ -24,7 +24,7 @@ async def info(ctx):
 async def updates(ctx):
 
 	updateHeader = "guess bot updates:\n"
-	updateMessage = "-Guessing the word in full will now win you the game\n-Capital letters will now also work"
+	updateMessage = "-Hangman gamemode"
 	await ctx.send(updateHeader + updateMessage)
 
 @bot.event
