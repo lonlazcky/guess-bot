@@ -36,15 +36,21 @@ async def on_message(message):
 	await bot.process_commands(message)
 
 	if message.author.bot:
-		return 
+		return
 
 	channel = message.channel
 	if not channel.id in games:
 	    return
-
-	if await games[channel.id].handle_message(message) == "end":
+	game = games[channel.id]
+	answer = await game.handle_message(message)
+	
+	if not answer:
+	    return
+	if answer == "END":
 		del games[channel.id]
-		
+		return
+	await game.send_message(answer)
+
 if __name__ == "__main__":
 	keep_alive()
 	bot.run(os.environ["token"])
